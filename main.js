@@ -44,7 +44,7 @@ catch (e) {
     process.exit(1);
 }
 const token = "";
-const server = "https://mainnet-api.algonode.network";
+const server = "https://mainnet-algorand.api.purestake.io/ps2";
 const port = 443;
 const algosdk = __importStar(require("algosdk"));
 const client = new algosdk.Algodv2(token, server, port);
