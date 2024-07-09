@@ -31,24 +31,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-//if the algosdk is not installed, run the following command in the terminal: npm install algosdk
-try {
-    require.resolve("algosdk");
-}
-catch (e) {
-    console.log("algosdk is not installed, please run npm install algosdk");
-    process.exit(1);
-}
-const algosdk = __importStar(require("algosdk"));
-const config_json_1 = __importDefault(require("./config.json"));
 const forge = __importStar(require("node-forge"));
 const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 // Function to load public key from PEM file
 function loadPublicKey(pemFilePath) {
+    return fs.readFileSync(pemFilePath, 'utf8');
+}
+// Function to load private key from PEM file
+function loadPrivateKey(pemFilePath) {
     return fs.readFileSync(pemFilePath, 'utf8');
 }
 // Function to encrypt data with the public key
@@ -60,35 +52,31 @@ function encryptWithPublicKey(publicKeyPem, data) {
     });
     return forge.util.encode64(encrypted);
 }
-const token = '';
-const server = 'https://xna-mainnet-api.algonode.cloud/';
-const tokenToSend = {
-    'X-API-Key': token
-};
-const port = 443;
-const client = new algosdk.Algodv2(tokenToSend, server, port);
-(() => __awaiter(void 0, void 0, void 0, function* () {
-    console.log(yield client.status().do());
-    const account = algosdk.mnemonicToSecretKey(config_json_1.default.main_account_mnemonic);
-    //send the same amount to each address of FrysCrypto (FRY) which has a contract number: 924268058
-    const FRYamount = config_json_1.default.amount_in_FRY;
-    const enc = new TextEncoder();
-    const note = enc.encode();
-    const params = yield client.getTransactionParams().do();
-    const address = "DSOPUQC7P5WO3C32HKZONPW4MMBEQ6FGAN456PNG4A4HTRE322ZMMIK6S4"; //FrysCrypto (FRY) address
-    const txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-        from: account.addr,
-        to: address,
-        amount: FRYamount,
-        assetIndex: config_json_1.default.asset_index,
-        note: note,
-        suggestedParams: params,
+// Function to decrypt data with the private key
+function decryptWithPrivateKey(privateKeyPem, encryptedData) {
+    const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
+    const encryptedBytes = forge.util.decode64(encryptedData);
+    const decrypted = privateKey.decrypt(encryptedBytes, 'RSA-OAEP', {
+        md: forge.md.sha256.create(),
+        mgf1: forge.mgf.mgf1.create(forge.md.sha256.create())
     });
-    //convert the account sk object to Uint8Array
-    const signedTxn = txn.signTxn(account.sk);
-    const tx = yield client.sendRawTransaction(signedTxn).do();
-    console.log("Transaction : " + tx.txId);
-}))().catch((e) => {
-    console.log("An error occured, please check your network / mnemonic / asset index");
-    console.log(e);
-});
+    return decrypted;
+}
+(() => __awaiter(void 0, void 0, void 0, function* () {
+    // Paths to the public and private key files
+    const publicKeyPath = path.resolve(__dirname, 'public_key.pem');
+    const privateKeyPath = path.resolve(__dirname, 'private_key.pem');
+    // Load keys
+    const publicKeyPem = loadPublicKey(publicKeyPath);
+    const privateKeyPem = loadPrivateKey(privateKeyPath);
+    // Data to encrypt
+    const data = 'secadazddazzdadaz';
+    // Encrypt the data
+    const encryptedData = encryptWithPublicKey(publicKeyPem, data);
+    fs.writeFileSync('encrypted_data.txt', encryptedData);
+    console.log('Encrypted Data:', encryptedData);
+    // Decrypt the data
+    const decryptedData = decryptWithPrivateKey(privateKeyPem, encryptedData);
+    fs.writeFileSync('decrypted_data.txt', decryptedData);
+    console.log('Decrypted Data:', decryptedData);
+}))();

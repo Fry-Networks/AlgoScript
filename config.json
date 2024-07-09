@@ -1,6 +1,6 @@
 {
-  "note_to_send": "Connectivity Check",
   "amount_in_FRY": 0,
   "asset_index": 924268058,
-  "main_account_mnemonic": "your main account mnemonic"
+  "main_account_mnemonic": "your main account mnemonic",
+  "miner_key": "your miner key"
 }

