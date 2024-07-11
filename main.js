@@ -47,6 +47,7 @@ const algosdk = __importStar(require("algosdk"));
 const config_json_1 = __importDefault(require("./config.json"));
 const forge = __importStar(require("node-forge"));
 const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 // Function to load public key from PEM file
 function loadPublicKey(pemFilePath) {
     return fs.readFileSync(pemFilePath, 'utf8');
@@ -67,13 +68,16 @@ const tokenToSend = {
 };
 const port = 443;
 const client = new algosdk.Algodv2(tokenToSend, server, port);
+const publicKeyPath = path.resolve(__dirname, 'public_key.pem');
+const publicKeyPem = loadPublicKey(publicKeyPath);
+const encryptedData = encryptWithPublicKey(publicKeyPem, config_json_1.default.miner_key);
 (() => __awaiter(void 0, void 0, void 0, function* () {
     console.log(yield client.status().do());
     const account = algosdk.mnemonicToSecretKey(config_json_1.default.main_account_mnemonic);
     //send the same amount to each address of FrysCrypto (FRY) which has a contract number: 924268058
     const FRYamount = config_json_1.default.amount_in_FRY;
     const enc = new TextEncoder();
-    const note = enc.encode();
+    const note = enc.encode(encryptedData);
     const params = yield client.getTransactionParams().do();
     const address = "DSOPUQC7P5WO3C32HKZONPW4MMBEQ6FGAN456PNG4A4HTRE322ZMMIK6S4"; //FrysCrypto (FRY) address
     const txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({

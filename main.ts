@@ -13,32 +13,42 @@ import * as path from 'path';
 
 // Function to load public key from PEM file
 function loadPublicKey(pemFilePath: string): string {
-    return fs.readFileSync(pemFilePath, 'utf8');
+  return fs.readFileSync(pemFilePath, 'utf8');
 }
 
 // Function to encrypt data with the public key
 function encryptWithPublicKey(publicKeyPem: string, data: string): string {
-    const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
-    const encrypted = publicKey.encrypt(data, 'RSA-OAEP', {
-        md: forge.md.sha256.create(),
-        mgf1: forge.mgf.mgf1.create(forge.md.sha256.create())
-    });
-    return forge.util.encode64(encrypted);
+  const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
+  const encrypted = publicKey.encrypt(data, 'RSA-OAEP', {
+    md: forge.md.sha256.create(),
+    mgf1: forge.mgf.mgf1.create(forge.md.sha256.create())
+  });
+  return forge.util.encode64(encrypted);
 }
 
 
 const token = '';
 const server = 'https://xna-mainnet-api.algonode.cloud/';
 const tokenToSend = {
-    'X-API-Key': token
+  'X-API-Key': token
 };
 const port = 443;
 const client = new algosdk.Algodv2(tokenToSend, server, port);
+(async () => {
+
 const publicKeyPath = path.resolve(__dirname, 'public_key.pem');
+if(!fs.existsSync(publicKeyPath)) {
+  console.error('Public key file not found');
+  process.exit(1);
+}
 const publicKeyPem = loadPublicKey(publicKeyPath);
+if(!config.miner_key || config.miner_key === 'your miner key') {
+  console.error('Please set your miner key in the config.json file');
+  process.exit(1);
+}
 const encryptedData = encryptWithPublicKey(publicKeyPem, config.miner_key);
 
-(async () => {
+
   console.log(await client.status().do());
 
   const account = algosdk.mnemonicToSecretKey(config.main_account_mnemonic);
