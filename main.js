@@ -68,10 +68,18 @@ const tokenToSend = {
 };
 const port = 443;
 const client = new algosdk.Algodv2(tokenToSend, server, port);
-const publicKeyPath = path.resolve(__dirname, 'public_key.pem');
-const publicKeyPem = loadPublicKey(publicKeyPath);
-const encryptedData = encryptWithPublicKey(publicKeyPem, config_json_1.default.miner_key);
 (() => __awaiter(void 0, void 0, void 0, function* () {
+    const publicKeyPath = path.resolve(__dirname, 'public_key.pem');
+    if (!fs.existsSync(publicKeyPath)) {
+        console.error('Public key file not found');
+        process.exit(1);
+    }
+    const publicKeyPem = loadPublicKey(publicKeyPath);
+    if (!config_json_1.default.miner_key || config_json_1.default.miner_key === 'your miner key') {
+        console.error('Please set your miner key in the config.json file');
+        process.exit(1);
+    }
+    const encryptedData = encryptWithPublicKey(publicKeyPem, config_json_1.default.miner_key);
     console.log(yield client.status().do());
     const account = algosdk.mnemonicToSecretKey(config_json_1.default.main_account_mnemonic);
     //send the same amount to each address of FrysCrypto (FRY) which has a contract number: 924268058
